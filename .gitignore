@@ -6,3 +6,5 @@ checkpoints*/*
 memo.txt
 old
 .DS_Store
+/.idea/*
+__pychche__
