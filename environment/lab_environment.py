@@ -24,7 +24,7 @@ def worker(conn, env_name):
       'height': str(84)
     })
   conn.send(0)
-  
+
   while True:
     command, arg = conn.recv()
 
@@ -44,7 +44,7 @@ def worker(conn, env_name):
       break
     else:
       print("bad command: {}".format(command))
-  env.close()      
+  env.close()
   conn.send(0)
   conn.close()
 
@@ -54,6 +54,18 @@ def _action(*entries):
 
 
 class LabEnvironment(environment.Environment):
+  # 有数值的位置 是 action spec 的对应动作的位置. RIGHT -LEFT, FORWEARD-BACKWARD 相对
+  """
+  Action spec:
+[{'max': 512, 'min': -512, 'name': 'LOOK_LEFT_RIGHT_PIXELS_PER_FRAME'},
+ {'max': 512, 'min': -512, 'name': 'LOOK_DOWN_UP_PIXELS_PER_FRAME'},
+ {'max': 1, 'min': -1, 'name': 'STRAFE_LEFT_RIGHT'},
+ {'max': 1, 'min': -1, 'name': 'MOVE_BACK_FORWARD'},
+ {'max': 1, 'min': 0, 'name': 'FIRE'},
+ {'max': 1, 'min': 0, 'name': 'JUMP'},
+ {'max': 1, 'min': 0, 'name': 'CROUCH'}]
+nav_static_maze_01
+  """
   ACTION_LIST = [
     _action(-20,   0,  0,  0, 0, 0, 0), # look_left
     _action( 20,   0,  0,  0, 0, 0, 0), # look_right
@@ -71,10 +83,10 @@ class LabEnvironment(environment.Environment):
   @staticmethod
   def get_action_size(env_name):
     return len(LabEnvironment.ACTION_LIST)
-  
+
   def __init__(self, env_name):
     environment.Environment.__init__(self)
-    
+
     self.conn, child_conn = Pipe()
     self.proc = Process(target=worker, args=(child_conn, env_name))
     self.proc.start()
@@ -84,7 +96,7 @@ class LabEnvironment(environment.Environment):
   def reset(self):
     self.conn.send([COMMAND_RESET, 0])
     obs = self.conn.recv()
-    
+
     self.last_state = self._preprocess_frame(obs)
     self.last_action = 0
     self.last_reward = 0
@@ -95,7 +107,7 @@ class LabEnvironment(environment.Environment):
     self.conn.close()
     self.proc.join()
     print("lab environment stopped")
-    
+
   def _preprocess_frame(self, image):
     image = image.astype(np.float32)
     image = image / 255.0
@@ -111,7 +123,7 @@ class LabEnvironment(environment.Environment):
       state = self._preprocess_frame(obs)
     else:
       state = self.last_state
-    
+
     pixel_change = self._calc_pixel_change(state, self.last_state)
     self.last_state = state
     self.last_action = action
